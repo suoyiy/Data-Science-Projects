@@ -1,0 +1,2256 @@
+---
+title: "Law Networks Project"
+author: "Suoyi Yang"
+date: "11/30/2019"
+output: pdf_document
+---
+
+# 1. Data Input
+
+```{r}
+friendship <- read.delim("ELfriend.dat", header = FALSE, sep = "")
+coworker <- read.delim("ELwork.dat", header = FALSE, sep = "")
+advice <- read.delim("ELadv.dat", header = FALSE, sep = "")
+attributes <- read.delim("ELattr.dat", header = FALSE, sep = "")
+attributes <-attributes[,-1]
+colnames(attributes) <- c("Status", "Gender", "Office", "Seniority", "Age",
+                          "Practice", "School")
+femIndex <- which(attributes$Gender==2)
+maleIndex <- which(attributes$Gender==1)
+Status1Index <- which(attributes$Status==1)
+Status2Index <- which(attributes$Status==2)
+```
+
+# 2. Create 3 Networks with Vertex Attributes
+
+```{r, message=FALSE, echo=FALSE}
+library(network)
+friendNet <- network(friendship, matrix.type = "adjacency")
+coworkNet <- network(coworker, matrix.type = "adjacency", directed=FALSE)
+coworkNet2 <- network(coworker, matrix.type = "adjacency")
+adviceNet <- network(advice, matrix.type = "adjacency")
+
+friendNet%v%"status" <- attributes$Status
+friendNet%v%"gender" <- attributes$Gender
+friendNet%v%"office" <- attributes$Office
+friendNet%v%"seniority" <- attributes$Seniority
+friendNet%v%"age" <- attributes$Age
+friendNet%v%"practice" <- attributes$Practice
+friendNet%v%"school" <- attributes$School
+  
+coworkNet%v%"status" <- attributes$Status
+coworkNet%v%"gender" <- attributes$Gender
+coworkNet%v%"office" <- attributes$Office
+coworkNet%v%"seniority" <- attributes$Seniority
+coworkNet%v%"age" <- attributes$Age
+coworkNet%v%"practice" <- attributes$Practice
+coworkNet%v%"school" <- attributes$School
+
+coworkNet2%v%"status" <- attributes$Status
+coworkNet2%v%"gender" <- attributes$Gender
+coworkNet2%v%"office" <- attributes$Office
+coworkNet2%v%"seniority" <- attributes$Seniority
+coworkNet2%v%"age" <- attributes$Age
+coworkNet2%v%"practice" <- attributes$Practice
+coworkNet2%v%"school" <- attributes$School
+
+adviceNet%v%"status" <- attributes$Status
+adviceNet%v%"gender" <- attributes$Gender
+adviceNet%v%"office" <- attributes$Office
+adviceNet%v%"seniority" <- attributes$Seniority
+adviceNet%v%"age" <- attributes$Age
+adviceNet%v%"practice" <- attributes$Practice
+adviceNet%v%"school" <- attributes$School
+```
+
+```{r}
+friendNet
+coworkNet
+adviceNet
+```
+
+# 3. Simple Visualization and Clustering between Genders
+circleB 4H triangleP
+```{r, echo=FALSE, fig.align="center"}
+set.seed(12345)
+
+vertCol <- ifelse(friendNet%v%"gender" == 1, "maroon4", "darkseagreen2")
+vertShape <- friendNet%v%"office" +2
+vertShape <-ifelse(vertShape==3, 20, vertShape)
+vertShape[vertShape==5] <-3
+vertSize <- ifelse(vertShape==20, 1, 1.3)
+vertSize[vertShape==3] <- 1.5
+
+plot(friendNet,vertex.col=vertCol,edge.col="gray", main="Lazega Friendship Network",vertex.sides=vertShape,vertex.cex=vertSize)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+
+```{r, echo=FALSE, fig.align="center"}
+set.seed(12345)
+
+vertCol <- ifelse(adviceNet%v%"gender" == 1, "maroon4", "darkseagreen2")
+
+plot(adviceNet,vertex.col=vertCol,edge.col="gray", main="Lazega Advice Network",
+     vertex.sides=vertShape,vertex.cex=vertSize)
+
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+
+```{r, echo=FALSE, fig.align="center"}
+set.seed(12345)
+
+vertCol <- ifelse(coworkNet%v%"gender" == 1, "maroon4", "darkseagreen2")
+
+plot(coworkNet,vertex.col=vertCol,edge.col="gray", main="Lazega Coworker Network",
+     vertex.sides=vertShape,vertex.cex=vertSize)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+
+# 4. Simple Graph Analysis: Full
+
+### (A) Prelim Results
+
+```{r}
+fEdgeList <- as.edgelist(friendNet)
+cEdgeList <- as.edgelist(coworkNet)
+c2EdgeList <- as.edgelist(coworkNet2)
+aEdgeList <- as.edgelist(adviceNet)
+```
+
+
+###### (I) General Density:
+
+```{r}
+library(gtools)
+posTies <- nrow(permutations(n=71,r=2))
+posTies2 <- nrow(combinations(n=71,r=2))
+#friend
+length(fEdgeList)/(posTies)
+#cowork
+length(cEdgeList)/(posTies2)
+#advice
+length(aEdgeList)/(posTies)
+```
+
+###### (II) FriendNet
+```{r}
+library(gtools)
+totalEdges <- length(fEdgeList[,1])
+
+posMFties <- length(maleIndex)*length(femIndex)
+posMties <- length(maleIndex)*70
+posFties <- 70*length(femIndex)
+posMMties <- length(maleIndex)*(length(maleIndex)-1)
+posFFties <- length(femIndex)*(length(femIndex)-1)
+
+pos12Fties <- length(Status1Index)*length(Status2Index)
+pos1ties <- length(Status1Index)*70
+pos2ties <- length(Status2Index)*70
+pos11ties <- length(Status1Index)*length(Status1Index)
+pos22ties <- length(Status2Index)*length(Status2Index)
+
+#male Form Tie
+sum(fEdgeList[,1]%in% maleIndex)/totalEdges
+sum(fEdgeList[,1]%in% maleIndex)/posMties
+
+#feale Form Tie
+sum(fEdgeList[,1]%in% femIndex)/totalEdges
+sum(fEdgeList[,1]%in% femIndex)/posFties
+
+####################################################################################
+
+#Mean from Male to Female
+sum(fEdgeList[,1]%in% maleIndex & fEdgeList[,2]%in% femIndex)/totalEdges
+sum(fEdgeList[,1]%in% maleIndex & fEdgeList[,2]%in% femIndex)/posMFties
+
+#Mean from Male to Male
+sum(fEdgeList[,1]%in% maleIndex & fEdgeList[,2]%in% maleIndex)/totalEdges
+sum(fEdgeList[,1]%in% maleIndex & fEdgeList[,2]%in% maleIndex)/posMMties 
+
+#Mean from Female to Male
+sum(fEdgeList[,1]%in% femIndex & fEdgeList[,2]%in% maleIndex)/totalEdges
+sum(fEdgeList[,1]%in% femIndex & fEdgeList[,2]%in% maleIndex)/posMFties
+
+#Mean from Female to Female
+sum(fEdgeList[,1]%in% femIndex & fEdgeList[,2]%in% femIndex)/totalEdges
+sum(fEdgeList[,1]%in% femIndex & fEdgeList[,2]%in% femIndex)/posFFties
+
+####################################################################################
+
+#Status1 Form Tie
+sum(fEdgeList[,1]%in% Status1Index)/totalEdges
+sum(fEdgeList[,1]%in% Status1Index)/pos1ties
+
+#Status2 Form Tie
+sum(fEdgeList[,1]%in% Status2Index)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index)/pos2ties
+
+####################################################################################
+
+#Mean from Stat2 to Stat1
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,2]%in% Status1Index)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,2]%in% Status1Index)/pos12Fties
+
+#Mean from Stat2 to Stat2
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,2]%in% Status2Index)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,2]%in% Status2Index)/pos22ties
+
+#Mean from Stat1 to Stat1
+sum(fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% Status1Index)/totalEdges
+sum(fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% Status1Index)/pos11ties
+
+#Mean from Stat1 to Stat2
+sum(fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% Status2Index)/totalEdges
+sum(fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% Status2Index)/pos12Fties
+
+####################################################################################
+
+s1MIndex <- which(attributes$Gender==1 & attributes$Status==1)
+s1FIndex <- which(attributes$Gender==2 & attributes$Status==1)
+s2MIndex <- which(attributes$Gender==1 & attributes$Status==2)
+s2FIndex <- which(attributes$Gender==2 & attributes$Status==2)
+
+s2M_s1All <- length(s2MIndex)*length(Status1Index)
+s2M_s1M <- length(s2MIndex)*length(s1MIndex)
+s2M_s1F <- length(s2MIndex)*length(s1FIndex)
+s2F_s1All <- length(s2FIndex)*length(Status1Index)
+s2F_s1M <- length(s2FIndex)*length(s1MIndex)
+s2F_s1F <- length(s2FIndex)*length(s1FIndex)
+
+#Mean from Stat2 MALE to Stat1
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,2]%in% Status1Index)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,2]%in% Status1Index)/s2M_s1All
+
+#Mean from Stat2 MALE to Stat1 MALE
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,2]%in% Status1Index& fEdgeList[,2]%in% maleIndex)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,2]%in% Status1Index& fEdgeList[,2]%in% maleIndex)/s2M_s1M
+
+#Mean from Stat2 MALE to Stat1 FEMALE
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,2]%in% Status1Index & fEdgeList[,2]%in% femIndex)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,2]%in% Status1Index & fEdgeList[,2]%in% femIndex)/s2M_s1F
+
+#Mean from Stat2 FEMALE to Stat1
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,2]%in% Status1Index)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,2]%in% Status1Index)/s2F_s1All
+
+#Mean from Stat2 FEMALE to Stat1 MALE
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,2]%in% Status1Index & fEdgeList[,2]%in% maleIndex)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,2]%in% Status1Index & fEdgeList[,2]%in% maleIndex)/s2F_s1M
+
+#Mean from Stat2 FEMALE to Stat1 FEMALE
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,2]%in% Status1Index & fEdgeList[,2]%in% femIndex)/totalEdges
+sum(fEdgeList[,1]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,2]%in% Status1Index & fEdgeList[,2]%in% femIndex)/s2F_s1F
+
+####################################################################################
+
+s1M_s2All <- length(s1MIndex)*length(Status2Index)
+s1M_s2M <- length(s1MIndex)*length(s2MIndex)
+s1M_s2F <- length(s1MIndex)*length(s2FIndex)
+s1F_s2All <- length(s1FIndex)*length(Status2Index)
+s1F_s2M <- length(s1FIndex)*length(s2MIndex)
+s1F_s2F <- length(s1FIndex)*length(s2FIndex)
+
+#Mean from Stat1 MALE to Stat2
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,1]%in% Status1Index)/totalEdges
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,1]%in% Status1Index)/s1M_s2All
+
+#Mean from Stat1 MALE to Stat2 MALE
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,1]%in% Status1Index& fEdgeList[,2]%in% maleIndex)/totalEdges
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,1]%in% Status1Index& fEdgeList[,2]%in% maleIndex)/s1M_s2M
+
+#Mean from Stat1 MALE to Stat2 FEMALE
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% femIndex)/totalEdges
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% maleIndex & 
+      fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% femIndex)/s1M_s2F
+
+#Mean from Stat1 FEMALE to Stat2
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,1]%in% Status1Index)/totalEdges
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,1]%in% Status1Index)/s1F_s2All
+
+#Mean from Stat1 FEMALE to Stat2 MALE
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% maleIndex)/totalEdges
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% maleIndex)/s1F_s2M
+
+#Mean from Stat1 FEMALE to Stat2 FEMALE
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% femIndex)/totalEdges
+sum(fEdgeList[,2]%in% Status2Index & fEdgeList[,1]%in% femIndex & 
+      fEdgeList[,1]%in% Status1Index & fEdgeList[,2]%in% femIndex)/s1F_s2F
+```
+
+###### (III) CoworkerNet
+```{r}
+totalEdges <- length(c2EdgeList[,1])
+posTies <- nrow(permutations(n=71,r=2))
+
+posMFties <- length(maleIndex)*length(femIndex)
+posMties <- length(maleIndex)*70
+posFties <- 70*length(femIndex)
+posMMties <- length(maleIndex)*(length(maleIndex)-1)
+posFFties <- length(femIndex)*(length(femIndex)-1)
+
+pos12Fties <- length(Status1Index)*length(Status2Index)
+pos1ties <- length(Status1Index)*70
+pos2ties <- length(Status2Index)*70
+pos11ties <- length(Status1Index)*length(Status1Index)
+pos22ties <- length(Status2Index)*length(Status2Index)
+
+#male Form Tie
+sum(c2EdgeList[,1]%in% maleIndex)/totalEdges
+sum(c2EdgeList[,1]%in% maleIndex)/posMties
+
+#feale Form Tie
+sum(c2EdgeList[,1]%in% femIndex)/totalEdges
+sum(c2EdgeList[,1]%in% femIndex)/posFties
+
+####################################################################################
+
+#Mean from Male to Female
+sum(c2EdgeList[,1]%in% maleIndex & c2EdgeList[,2]%in% femIndex)/totalEdges
+sum(c2EdgeList[,1]%in% maleIndex & c2EdgeList[,2]%in% femIndex)/posMFties
+
+#Mean from Male to Male
+sum(c2EdgeList[,1]%in% maleIndex & c2EdgeList[,2]%in% maleIndex)/totalEdges
+sum(c2EdgeList[,1]%in% maleIndex & c2EdgeList[,2]%in% maleIndex)/posMMties 
+
+#Mean from Female to Male
+sum(c2EdgeList[,1]%in% femIndex & c2EdgeList[,2]%in% maleIndex)/totalEdges
+sum(c2EdgeList[,1]%in% femIndex & c2EdgeList[,2]%in% maleIndex)/posMFties
+
+#Mean from Female to Female
+sum(c2EdgeList[,1]%in% femIndex & c2EdgeList[,2]%in% femIndex)/totalEdges
+sum(c2EdgeList[,1]%in% femIndex & c2EdgeList[,2]%in% femIndex)/posFFties
+
+####################################################################################
+
+#Status1 Form Tie
+sum(c2EdgeList[,1]%in% Status1Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status1Index)/pos1ties
+
+#Status2 Form Tie
+sum(c2EdgeList[,1]%in% Status2Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index)/pos2ties
+
+####################################################################################
+
+#Mean from Stat2 to Stat1
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,2]%in% Status1Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,2]%in% Status1Index)/pos12Fties
+
+#Mean from Stat2 to Stat2
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,2]%in% Status2Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,2]%in% Status2Index)/pos22ties
+
+#Mean from Stat1 to Stat1
+sum(c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% Status1Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% Status1Index)/pos11ties
+
+#Mean from Stat1 to Stat2
+sum(c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% Status2Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% Status2Index)/pos12Fties
+
+####################################################################################
+
+s1MIndex <- which(attributes$Gender==1 & attributes$Status==1)
+s1FIndex <- which(attributes$Gender==2 & attributes$Status==1)
+s2MIndex <- which(attributes$Gender==1 & attributes$Status==2)
+s2FIndex <- which(attributes$Gender==2 & attributes$Status==2)
+
+s2M_s1All <- length(s2MIndex)*length(Status1Index)
+s2M_s1M <- length(s2MIndex)*length(s1MIndex)
+s2M_s1F <- length(s2MIndex)*length(s1FIndex)
+s2F_s1All <- length(s2FIndex)*length(Status1Index)
+s2F_s1M <- length(s2FIndex)*length(s1MIndex)
+s2F_s1F <- length(s2FIndex)*length(s1FIndex)
+
+#Mean from Stat2 MALE to Stat1
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,2]%in% Status1Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,2]%in% Status1Index)/s2M_s1All
+
+#Mean from Stat2 MALE to Stat1 MALE
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,2]%in% Status1Index& c2EdgeList[,2]%in% maleIndex)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,2]%in% Status1Index& c2EdgeList[,2]%in% maleIndex)/s2M_s1M
+
+#Mean from Stat2 MALE to Stat1 FEMALE
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,2]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,2]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/s2M_s1F
+
+#Mean from Stat2 FEMALE to Stat1
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,2]%in% Status1Index)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,2]%in% Status1Index)/s2F_s1All
+
+#Mean from Stat2 FEMALE to Stat1 MALE
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,2]%in% Status1Index & c2EdgeList[,2]%in% maleIndex)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,2]%in% Status1Index & c2EdgeList[,2]%in% maleIndex)/s2F_s1M
+
+#Mean from Stat2 FEMALE to Stat1 FEMALE
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,2]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/totalEdges
+sum(c2EdgeList[,1]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,2]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/s2F_s1F
+
+####################################################################################
+
+s1M_s2All <- length(s1MIndex)*length(Status2Index)
+s1M_s2M <- length(s1MIndex)*length(s2MIndex)
+s1M_s2F <- length(s1MIndex)*length(s2FIndex)
+s1F_s2All <- length(s1FIndex)*length(Status2Index)
+s1F_s2M <- length(s1FIndex)*length(s2MIndex)
+s1F_s2F <- length(s1FIndex)*length(s2FIndex)
+
+#Mean from Stat1 MALE to Stat2
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,1]%in% Status1Index)/totalEdges
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,1]%in% Status1Index)/s1M_s2All
+
+#Mean from Stat1 MALE to Stat2 MALE
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,1]%in% Status1Index& c2EdgeList[,2]%in% maleIndex)/totalEdges
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,1]%in% Status1Index& c2EdgeList[,2]%in% maleIndex)/s1M_s2M
+
+#Mean from Stat1 MALE to Stat2 FEMALE
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/totalEdges
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% maleIndex & 
+      c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/s1M_s2F
+
+#Mean from Stat1 FEMALE to Stat2
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,1]%in% Status1Index)/totalEdges
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,1]%in% Status1Index)/s1F_s2All
+
+#Mean from Stat1 FEMALE to Stat2 MALE
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% maleIndex)/totalEdges
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% maleIndex)/s1F_s2M
+
+#Mean from Stat1 FEMALE to Stat2 FEMALE
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/totalEdges
+sum(c2EdgeList[,2]%in% Status2Index & c2EdgeList[,1]%in% femIndex & 
+      c2EdgeList[,1]%in% Status1Index & c2EdgeList[,2]%in% femIndex)/s1F_s2F
+```
+
+###### (IV) AdviceNet
+```{r}
+totalEdges <- length(aEdgeList[,1])
+posTies <- nrow(permutations(n=71,r=2))
+
+posMFties <- length(maleIndex)*length(femIndex)
+posMties <- length(maleIndex)*70
+posFties <- 70*length(femIndex)
+posMMties <- length(maleIndex)*(length(maleIndex)-1)
+posFFties <- length(femIndex)*(length(femIndex)-1)
+
+pos12Fties <- length(Status1Index)*length(Status2Index)
+pos1ties <- length(Status1Index)*70
+pos2ties <- length(Status2Index)*70
+pos11ties <- length(Status1Index)*length(Status1Index)
+pos22ties <- length(Status2Index)*length(Status2Index)
+
+#male Form Tie
+sum(aEdgeList[,1]%in% maleIndex)/totalEdges
+sum(aEdgeList[,1]%in% maleIndex)/posMties
+
+#feale Form Tie
+sum(aEdgeList[,1]%in% femIndex)/totalEdges
+sum(aEdgeList[,1]%in% femIndex)/posFties
+
+####################################################################################
+
+#Mean from Male to Female
+sum(aEdgeList[,1]%in% maleIndex & aEdgeList[,2]%in% femIndex)/totalEdges
+sum(aEdgeList[,1]%in% maleIndex & aEdgeList[,2]%in% femIndex)/posMFties
+
+#Mean from Male to Male
+sum(aEdgeList[,1]%in% maleIndex & aEdgeList[,2]%in% maleIndex)/totalEdges
+sum(aEdgeList[,1]%in% maleIndex & aEdgeList[,2]%in% maleIndex)/posMMties 
+
+#Mean from Female to Male
+sum(aEdgeList[,1]%in% femIndex & aEdgeList[,2]%in% maleIndex)/totalEdges
+sum(aEdgeList[,1]%in% femIndex & aEdgeList[,2]%in% maleIndex)/posMFties
+
+#Mean from Female to Female
+sum(aEdgeList[,1]%in% femIndex & aEdgeList[,2]%in% femIndex)/totalEdges
+sum(aEdgeList[,1]%in% femIndex & aEdgeList[,2]%in% femIndex)/posFFties
+
+####################################################################################
+
+#Status1 Form Tie
+sum(aEdgeList[,1]%in% Status1Index)/totalEdges
+sum(aEdgeList[,1]%in% Status1Index)/pos1ties
+
+#Status2 Form Tie
+sum(aEdgeList[,1]%in% Status2Index)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index)/pos2ties
+
+####################################################################################
+
+#Mean from Stat2 to Stat1
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,2]%in% Status1Index)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,2]%in% Status1Index)/pos12Fties
+
+#Mean from Stat2 to Stat2
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,2]%in% Status2Index)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,2]%in% Status2Index)/pos22ties
+
+#Mean from Stat1 to Stat1
+sum(aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% Status1Index)/totalEdges
+sum(aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% Status1Index)/pos11ties
+
+#Mean from Stat1 to Stat2
+sum(aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% Status2Index)/totalEdges
+sum(aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% Status2Index)/pos12Fties
+
+####################################################################################
+
+s1MIndex <- which(attributes$Gender==1 & attributes$Status==1)
+s1FIndex <- which(attributes$Gender==2 & attributes$Status==1)
+s2MIndex <- which(attributes$Gender==1 & attributes$Status==2)
+s2FIndex <- which(attributes$Gender==2 & attributes$Status==2)
+
+s2M_s1All <- length(s2MIndex)*length(Status1Index)
+s2M_s1M <- length(s2MIndex)*length(s1MIndex)
+s2M_s1F <- length(s2MIndex)*length(s1FIndex)
+s2F_s1All <- length(s2FIndex)*length(Status1Index)
+s2F_s1M <- length(s2FIndex)*length(s1MIndex)
+s2F_s1F <- length(s2FIndex)*length(s1FIndex)
+
+#Mean from Stat2 MALE to Stat1
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,2]%in% Status1Index)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,2]%in% Status1Index)/s2M_s1All
+
+#Mean from Stat2 MALE to Stat1 MALE
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,2]%in% Status1Index& aEdgeList[,2]%in% maleIndex)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,2]%in% Status1Index& aEdgeList[,2]%in% maleIndex)/s2M_s1M
+
+#Mean from Stat2 MALE to Stat1 FEMALE
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,2]%in% Status1Index & aEdgeList[,2]%in% femIndex)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,2]%in% Status1Index & aEdgeList[,2]%in% femIndex)/s2M_s1F
+
+#Mean from Stat2 FEMALE to Stat1
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,2]%in% Status1Index)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,2]%in% Status1Index)/s2F_s1All
+
+#Mean from Stat2 FEMALE to Stat1 MALE
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,2]%in% Status1Index & aEdgeList[,2]%in% maleIndex)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,2]%in% Status1Index & aEdgeList[,2]%in% maleIndex)/s2F_s1M
+
+#Mean from Stat2 FEMALE to Stat1 FEMALE
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,2]%in% Status1Index & aEdgeList[,2]%in% femIndex)/totalEdges
+sum(aEdgeList[,1]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,2]%in% Status1Index & aEdgeList[,2]%in% femIndex)/s2F_s1F
+
+####################################################################################
+
+s1M_s2All <- length(s1MIndex)*length(Status2Index)
+s1M_s2M <- length(s1MIndex)*length(s2MIndex)
+s1M_s2F <- length(s1MIndex)*length(s2FIndex)
+s1F_s2All <- length(s1FIndex)*length(Status2Index)
+s1F_s2M <- length(s1FIndex)*length(s2MIndex)
+s1F_s2F <- length(s1FIndex)*length(s2FIndex)
+
+#Mean from Stat1 MALE to Stat2
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,1]%in% Status1Index)/totalEdges
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,1]%in% Status1Index)/s1M_s2All
+
+#Mean from Stat1 MALE to Stat2 MALE
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,1]%in% Status1Index& aEdgeList[,2]%in% maleIndex)/totalEdges
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,1]%in% Status1Index& aEdgeList[,2]%in% maleIndex)/s1M_s2M
+
+#Mean from Stat1 MALE to Stat2 FEMALE
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% femIndex)/totalEdges
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% maleIndex & 
+      aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% femIndex)/s1M_s2F
+
+#Mean from Stat1 FEMALE to Stat2
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,1]%in% Status1Index)/totalEdges
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,1]%in% Status1Index)/s1F_s2All
+
+#Mean from Stat1 FEMALE to Stat2 MALE
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% maleIndex)/totalEdges
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% maleIndex)/s1F_s2M
+
+#Mean from Stat1 FEMALE to Stat2 FEMALE
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% femIndex)/totalEdges
+sum(aEdgeList[,2]%in% Status2Index & aEdgeList[,1]%in% femIndex & 
+      aEdgeList[,1]%in% Status1Index & aEdgeList[,2]%in% femIndex)/s1F_s2F
+```
+
+### (B) Degree Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+library(degreenet, quietly = TRUE) 
+library(sna, quietly = TRUE)
+par(mfrow=c(2,2))
+
+friendOutDeg <- sna::degree(friendNet, cmode='outdegree')
+coworkOutDeg <- sna::degree(coworkNet2, cmode='outdegree')
+adviceOutDeg<- sna::degree(adviceNet, cmode='outdegree')
+
+hist(friendOutDeg[femIndex], main = "Friend Net: Out-Degree Distr. Female", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+
+hist(friendOutDeg[maleIndex], main = "Friend Net: Out-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+
+hist(coworkOutDeg[femIndex], main = "Cowork Net: Out-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+hist(coworkOutDeg[maleIndex], main = "Cowork Net: Out-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+
+hist(adviceOutDeg[femIndex], main = "Advice Net: Out-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+hist(adviceOutDeg[maleIndex], main = "Advice Network: Out-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 41, 
+     cex.main=0.7,xlim = c(0,30))
+```
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendInDeg<- sna::degree(friendNet, cmode='indegree')
+coworkInDeg<- sna::degree(coworkNet2, cmode='indegree')
+adviceInDeg<- sna::degree(adviceNet, cmode='indegree')
+
+hist(friendInDeg[femIndex], main = "Friend Net: In-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+hist(friendInDeg[maleIndex], main = "Friend Net: In-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+
+hist(coworkInDeg[femIndex], main = "Cowork Net: In-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+hist(coworkInDeg[maleIndex], main = "Cowork Net: In-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+
+hist(adviceInDeg[femIndex], main = "Advice Net: In-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+hist(adviceInDeg[maleIndex], main = "Advice Net: In-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 31, 
+     cex.main=0.7,xlim = c(0,30))
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+library(stargazer)
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendInDeg[femIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkInDeg[femIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceInDeg[femIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "In-Degree Summary for Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendInDeg[maleIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkInDeg[maleIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceInDeg[maleIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "In-Degree Summary for Male",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat2 <- as.data.frame(unclass(summary(friendOutDeg[femIndex])))
+dat2[,1]<- round(dat2[,1],digits = 2)
+dat2$v2 <- round(unclass(summary(coworkOutDeg[femIndex])),digits = 2)
+dat2$v3 <- round(unclass(summary(adviceOutDeg[femIndex])),digits = 2)
+colnames(dat2) <- c("Friends","Coworkers","Advice")
+df3 <- data.frame(t(dat2))
+stargazer(df3,type = 'latex',summary=FALSE, title = "Out-Degree Summary for Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat2 <- as.data.frame(unclass(summary(friendOutDeg[maleIndex])))
+dat2[,1]<- round(dat2[,1],digits = 2)
+dat2$v2 <- round(unclass(summary(coworkOutDeg[maleIndex])),digits = 2)
+dat2$v3 <- round(unclass(summary(adviceOutDeg[maleIndex])),digits = 2)
+colnames(dat2) <- c("Friends","Coworkers","Advice")
+df3 <- data.frame(t(dat2))
+stargazer(df3,type = 'latex',summary=FALSE, title = "Out-Degree Summary for Male",header=FALSE )
+```
+
+
+##### (I) Reciprocity
+
+```{r, message=FALSE}
+library(intergraph)
+library(igraph)
+igraph::reciprocity(asIgraph(friendNet))
+igraph::reciprocity(asIgraph(coworkNet))
+igraph::reciprocity(asIgraph(adviceNet))
+```
+
+
+##### (II) Other Overall
+
+```{r}
+#friend
+mean(friendOutDeg)
+mean(friendInDeg)
+
+#people were more heterogeneous in terms of naming others as friend 
+#than being considered a friend
+sd(friendOutDeg)
+sd(friendInDeg)
+
+#people to considered others friends more got named as friends more
+cor(friendOutDeg,friendInDeg)
+
+#cowork
+mean(coworkOutDeg)
+mean(coworkInDeg)
+
+#Same since undirected
+sd(coworkOutDeg)
+sd(coworkInDeg)
+cor(coworkOutDeg,coworkInDeg)
+
+#advice
+mean(adviceOutDeg)
+mean(adviceInDeg)
+#people were more heterogeneous in terms of being named 
+#of given advice than asked for advice
+sd(adviceOutDeg)
+sd(adviceInDeg)
+
+#not a strong correlation between being asked for advice and 
+#asking for advice
+cor(adviceOutDeg,adviceInDeg)
+
+```
+
+
+##### (III) Other Gender Specific
+
+```{r}
+#female friend
+
+#women were equal heterogeneous in terms of naming others as friend 
+#as to being considered a friend
+sd(friendOutDeg[femIndex])
+sd(friendInDeg[femIndex])
+
+#women who considered others friends more got named as friends more
+cor(friendOutDeg[femIndex],friendInDeg[femIndex])
+
+#female advice
+
+#women were more heterogeneous in terms of being named 
+#of given advice than asked for advice
+sd(adviceOutDeg[femIndex])
+sd(adviceInDeg[femIndex])
+
+#women who gave more advice asked less advice and vice versa (nor no corr?????)
+cor(adviceOutDeg[femIndex],adviceInDeg[femIndex])
+
+#male friend
+
+#men were more heterogeneous in terms of naming others as friend 
+#than being considered a friend
+sd(friendOutDeg[maleIndex])
+sd(friendInDeg[maleIndex])
+
+#men who considered others friends more got named as friends more
+cor(friendOutDeg[maleIndex],friendInDeg[maleIndex])
+
+#male advice
+#men were more heterogeneous in terms of being named 
+#of given advice than asked for advice
+sd(adviceOutDeg[maleIndex])
+sd(adviceInDeg[maleIndex])
+
+#men(nor no corr?????)
+cor(adviceOutDeg[maleIndex],adviceInDeg[maleIndex])
+```
+
+### (C) Eigenvalue Centrality Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendEC <- sna::evcent(friendNet, gmode = "digraph")
+coworkEC <- sna::evcent(coworkNet, gmode = "graph")
+adviceEC <- sna::evcent(adviceNet, gmode = "digraph")
+
+hist(friendEC[femIndex], main = "Friend Net: Eigen Centr. Distr. Female", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, 
+     cex.main=0.7,xlim = c(0,.35))
+
+hist(friendEC[maleIndex], main = "Friend Net: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, 
+     cex.main=0.7,xlim = c(0,.35))
+
+hist(coworkEC[femIndex], main = "Cowork Net: Eigen Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, 
+     cex.main=0.7,xlim = c(0,.35))
+hist(coworkEC[maleIndex], main = "Cowork Net: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, 
+     cex.main=0.7,xlim = c(0,.35))
+
+hist(adviceEC[femIndex], main = "Advice Net: Eigen Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, 
+     cex.main=0.7,xlim = c(0,.35))
+hist(adviceEC[maleIndex], main = "Advice Network: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, 
+     cex.main=0.7,xlim = c(0,.35))
+```
+
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendEC[femIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkEC[femIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceEC[femIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "Eigen Centr. Summary for,Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendEC[maleIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkEC[maleIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceEC[maleIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "Eigen Centr. Summary for,Male",header=FALSE )
+```
+
+### (D) Closeness Centrality Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendCC <- sna::closeness(friendNet, gmode = "digraph")
+coworkCC <- sna::closeness(coworkNet, gmode = "graph")
+adviceCC <- sna::closeness(adviceNet, gmode = "digraph")
+
+hist(friendCC[femIndex], main = "Friend Net: Closeness Centr. Distr. Female", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 40, cex.main=0.7)
+
+hist(friendCC[maleIndex], main = "Friend Net: Closeness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 40, cex.main=0.7)
+
+hist(coworkCC[femIndex], main = "Cowork Net: Closeness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 40, cex.main=0.7)
+hist(coworkCC[maleIndex], main = "Cowork Net: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 40, cex.main=0.7)
+
+hist(adviceCC[femIndex], main = "Advice Net: Closeness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 40, cex.main=0.7)
+hist(adviceCC[maleIndex], main = "Advice Network: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 40, cex.main=0.7)
+```
+
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendCC[femIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkCC[femIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceCC[femIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "Closeness Centr. Summary for,Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendCC[maleIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkCC[maleIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceCC[maleIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "Closeness Centr. Summary for,Male",header=FALSE )
+```
+
+### (E) Betweeness Centrality Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendBC <- sna::betweenness(friendNet, gmode = "digraph")
+coworkBC <- sna::betweenness(coworkNet, gmode = "graph")
+adviceBC <- sna::betweenness(adviceNet, gmode = "digraph")
+
+hist(friendBC[femIndex], main = "Friend Net: Betweenness Centr. Distr. Female", 
+     ylab = "Fequency", xlab = "Betweenness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim=c(0,600))
+
+hist(friendBC[maleIndex], main = "Friend Net: Betweenness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Betweenness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim=c(0,600))
+
+hist(coworkBC[femIndex], main = "Cowork Net: Betweenness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Betweenness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim=c(0,600))
+hist(coworkBC[maleIndex], main = "Cowork Net: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Betweenness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim=c(0,600))
+
+hist(adviceBC[femIndex], main = "Advice Net: Betweenness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Betweenness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim=c(0,600))
+hist(adviceBC[maleIndex], main = "Advice Network: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Betweenness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim=c(0,600))
+```
+
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendBC[femIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkBC[femIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceBC[femIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "Betweenness Centr. Summary for,Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendBC[maleIndex])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkBC[maleIndex])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceBC[maleIndex])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "Betweenness Centr. Summary for,Male",header=FALSE )
+```
+
+# 5. Components Visualization and Clustering
+
+```{r, message=FALSE, echo=FALSE, results='hide'}
+friendCompDistr <- component.dist(friendNet)
+coworkCompDistr <- component.dist(coworkNet)
+coworkCompDistr2 <- component.dist(coworkNet2)
+adviceCompDistr <- component.dist(adviceNet)
+
+friendLargeComp<-network(component.largest(friendNet, result="graph"),directed = TRUE)
+coworkLargeComp<-network(component.largest(coworkNet, result="graph"),directed = FALSE)
+coworkLargeComp2<-network(component.largest(coworkNet2, result="graph"),directed = TRUE)
+adviceLargeComp<-network(component.largest(adviceNet, result="graph"),directed = TRUE)
+
+fLCindex <- which(network.vertex.names(friendNet)%in%network.vertex.names(friendLargeComp))
+cLCindex <- which(network.vertex.names(coworkNet)%in%network.vertex.names(coworkLargeComp))
+cLCindex2 <- which(network.vertex.names(coworkNet2)%in%network.vertex.names(coworkLargeComp2))
+aLCindex <- which(network.vertex.names(adviceNet)%in%network.vertex.names(adviceLargeComp))
+
+friendLargeComp%v%"status" <- attributes$Status[fLCindex]
+friendLargeComp%v%"gender" <- attributes$Gender[fLCindex]
+friendLargeComp%v%"office" <- attributes$Office[fLCindex]
+friendLargeComp%v%"seniority" <- attributes$Seniority[fLCindex]
+friendLargeComp%v%"age" <- attributes$Age[fLCindex]
+friendLargeComp%v%"practice" <- attributes$Practice[fLCindex]
+friendLargeComp%v%"school" <- attributes$School[fLCindex]
+  
+coworkLargeComp%v%"status" <- attributes$Status[cLCindex]
+coworkLargeComp%v%"gender" <- attributes$Gender[cLCindex]
+coworkLargeComp%v%"office" <- attributes$Office[cLCindex]
+coworkLargeComp%v%"seniority" <- attributes$Seniority[cLCindex]
+coworkLargeComp%v%"age" <- attributes$Age[cLCindex]
+coworkLargeComp%v%"practice" <- attributes$Practice[cLCindex]
+coworkLargeComp%v%"school" <- attributes$School[cLCindex]
+
+coworkLargeComp2%v%"status" <- attributes$Status[cLCindex2]
+coworkLargeComp2%v%"gender" <- attributes$Gender[cLCindex2]
+coworkLargeComp2%v%"office" <- attributes$Office[cLCindex2]
+coworkLargeComp2%v%"seniority" <- attributes$Seniority[cLCindex2]
+coworkLargeComp2%v%"age" <- attributes$Age[cLCindex2]
+coworkLargeComp2%v%"practice" <- attributes$Practice[cLCindex2]
+coworkLargeComp2%v%"school" <- attributes$School[cLCindex2]
+
+adviceLargeComp%v%"status" <- attributes$Status[aLCindex]
+adviceLargeComp%v%"gender" <- attributes$Gender[aLCindex]
+adviceLargeComp%v%"office" <- attributes$Office[aLCindex]
+adviceLargeComp%v%"seniority" <- attributes$Seniority[aLCindex]
+adviceLargeComp%v%"age" <- attributes$Age[aLCindex]
+adviceLargeComp%v%"practice" <- attributes$Practice[aLCindex]
+adviceLargeComp%v%"school" <- attributes$School[aLCindex]
+```
+
+```{r, echo=FALSE, fig.align="center"}
+set.seed(12345)
+length(friendCompDistr)
+max(friendCompDistr$csize)
+
+vertColLCF <- ifelse(friendLargeComp%v%"gender" == 1, "maroon4", "darkseagreen2")
+vertShapeLCF <- friendLargeComp%v%"office" +2
+vertShapeLCF <-ifelse(vertShapeLCF==3, 20, vertShapeLCF)
+vertShapeLCF[vertShapeLCF==5] <-3
+vertSizeLCF <- ifelse(vertShapeLCF==20, 1, 1.3)
+vertSizeLCF[vertShapeLCF==3] <- 1.5
+
+plot(friendLargeComp,vertex.col=vertColLCF,edge.col="gray", main="Friendship LC",vertex.sides=vertShapeLCF,vertex.cex=vertSizeLCF)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+
+```{r, echo=FALSE, fig.align="center"}
+set.seed(12345)
+length(coworkCompDistr)
+max(coworkCompDistr$csize)
+
+vertColLCC <- ifelse(coworkLargeComp%v%"gender" == 1, "maroon4", "darkseagreen2")
+vertShapeLCC <- coworkLargeComp%v%"office" +2
+vertShapeLCC <-ifelse(vertShapeLCC==3, 20, vertShapeLCC)
+vertShapeLCC[vertShapeLCC==5] <-3
+vertSizeLCC <- ifelse(vertShapeLCC==20, 1, 1.3)
+vertSizeLCC[vertShapeLCC==3] <- 1.5
+
+plot(coworkLargeComp,vertex.col=vertColLCC,edge.col="gray", main="Coworker LC",vertex.sides=vertShapeLCC,vertex.cex=vertSizeLCC)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+
+```{r, echo=FALSE, fig.align="center"}
+set.seed(12345)
+length(adviceCompDistr)
+max(adviceCompDistr$csize)
+
+vertColLCA <- ifelse(adviceLargeComp%v%"gender" == 1, "maroon4", "darkseagreen2")
+
+vertShapeLCA <- adviceLargeComp%v%"office" +2
+vertShapeLCA <-ifelse(vertShapeLCA==3, 20, vertShapeLCA)
+vertShapeLCA[vertShapeLCA==5] <-3
+vertSizeLCA <- ifelse(vertShapeLCA==20, 1, 1.3)
+vertSizeLCA[vertShapeLCA==3] <- 1.5
+
+plot(adviceLargeComp,vertex.col=vertColLCA,edge.col="gray", 
+     main="Advice LC",vertex.sides=vertShapeLCA,vertex.cex=vertSizeLCA)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+
+# 6. Simple Graph Analysis: Largest Component
+
+### (A) LC: Degree Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+library(degreenet, quietly = TRUE) 
+library(sna, quietly = TRUE)
+par(mfrow=c(2,2))
+
+femLCIndexF <- which(friendLargeComp%v%"gender"==2)
+maleLCIndexF <- which(friendLargeComp%v%"gender"==1)
+
+femLCIndexC <- which(coworkLargeComp%v%"gender"==2)
+maleLCIndexC <- which(coworkLargeComp%v%"gender"==1)
+
+femLCIndexC2 <- which(coworkLargeComp2%v%"gender"==2)
+maleLCIndexC2 <- which(coworkLargeComp2%v%"gender"==1)
+
+femLCIndexA <- which(adviceLargeComp%v%"gender"==2)
+maleLCIndexA <- which(adviceLargeComp%v%"gender"==1)
+
+friendLCOutDeg <- sna::degree(friendLargeComp, cmode='outdegree')
+coworkLCOutDeg <- sna::degree(coworkLargeComp, cmode='outdegree')
+coworkLCOutDeg2 <- sna::degree(coworkLargeComp2, cmode='outdegree')
+adviceLCOutDeg<- sna::degree(adviceLargeComp, cmode='outdegree')
+
+hist(friendLCOutDeg[femLCIndexF], main = "Friend LC Net: Out-Degree Distr. Female", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, cex.main=0.7,
+     xlim = c(0,30))
+
+hist(friendLCOutDeg[maleLCIndexF], main = "Friend LC Net: Out-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, cex.main=0.7,
+     xlim = c(0,30))
+
+hist(coworkLCOutDeg2[femLCIndexC2], main = "Cowork LC Net: Out-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, cex.main=0.7,
+     xlim = c(0,30))
+hist(coworkLCOutDeg2[maleLCIndexC2], main = "Cowork LC Net: Out-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, cex.main=0.7,
+     xlim = c(0,30))
+
+hist(adviceLCOutDeg[femLCIndexA], main = "Advice LC Net: Out-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, cex.main=0.7,
+     xlim = c(0,30))
+hist(adviceLCOutDeg[maleLCIndexA], main = "Advice LC Net: Out-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "Out-Degree", col = "blue", breaks = 31, cex.main=0.7,
+     xlim = c(0,30))
+```
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendLCInDeg<- sna::degree(friendLargeComp, cmode='indegree')
+coworkLCInDeg<- sna::degree(coworkLargeComp, cmode='indegree')
+coworkLCInDeg2<- sna::degree(coworkLargeComp2, cmode='indegree')
+adviceLCInDeg<- sna::degree(adviceLargeComp, cmode='indegree')
+
+hist(friendLCInDeg[femLCIndexF], main = "Friend LC Net: In-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,35))
+hist(friendLCInDeg[maleLCIndexF], main = "Friend LC Net: In-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,35))
+
+hist(coworkLCInDeg2[femLCIndexC2], main = "Cowork LC Net: In-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,35))
+hist(coworkLCInDeg2[maleLCIndexC2], main = "Cowork LC Net: In-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,35))
+
+hist(adviceLCInDeg[femLCIndexA], main = "Advice LC Net: In-Degree Distr. of Female", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,35))
+hist(adviceLCInDeg[maleLCIndexA], main = "Advice LC Net: In-Degree Distr. of Male", 
+     ylab = "Fequency", xlab = "In-Degree", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,35))
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCInDeg[femLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCInDeg2[femLCIndexC2])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCInDeg[femLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC In-Degree Summary for Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCInDeg[maleLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCInDeg2[maleLCIndexC2])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCInDeg[maleLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC In-Degree Summary for Male",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+dat2 <- as.data.frame(unclass(summary(friendLCOutDeg[femLCIndexF])))
+dat2[,1]<- round(dat2[,1],digits = 2)
+dat2$v2 <- round(unclass(summary(coworkLCOutDeg2[femLCIndexC2])),digits = 2)
+dat2$v3 <- round(unclass(summary(adviceLCOutDeg[femLCIndexA])),digits = 2)
+colnames(dat2) <- c("Friends","Coworkers","Advice")
+df3 <- data.frame(t(dat2))
+stargazer(df3,type = 'latex',summary=FALSE, title = "LC Out-Degree Summary for Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+dat2 <- as.data.frame(unclass(summary(friendLCOutDeg[maleLCIndexF])))
+dat2[,1]<- round(dat2[,1],digits = 2)
+dat2$v2 <- round(unclass(summary(coworkLCOutDeg2[maleLCIndexC2])),digits = 2)
+dat2$v3 <- round(unclass(summary(adviceLCOutDeg[maleLCIndexA])),digits = 2)
+colnames(dat2) <- c("Friends","Coworkers","Advice")
+df3 <- data.frame(t(dat2))
+stargazer(df3,type = 'latex',summary=FALSE, title = "LC Out-Degree Summary for Male",header=FALSE )
+```
+
+
+### (B) LC: Eigenvalue Centrality Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendLCEC <- sna::evcent(friendLargeComp, gmode = "digraph")
+coworkLCEC <- sna::evcent(coworkLargeComp, gmode = "graph")
+adviceLCEC <- sna::evcent(adviceLargeComp, gmode = "digraph")
+
+hist(friendLCEC[femLCIndexF], main = "Friend LC Net: Eigen Centr. Distr. Female", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,.35))
+hist(friendLCEC[maleLCIndexF ], main = "Friend LC Net: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,.35))
+
+hist(coworkLCEC[femLCIndexC], main = "Cowork LC Net: Eigen Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,.35))
+hist(coworkLCEC[maleLCIndexC], main = "Cowork LC Net: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,.35))
+
+hist(adviceLCEC[femLCIndexA], main = "Advice LC Net: Eigen Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,.35))
+hist(adviceLCEC[maleLCIndexA], main = "Advice LC Net: Eigen Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Eigenval", col = "blue", breaks = 36, cex.main=0.7,
+     xlim = c(0,.35))
+```
+
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCEC[femLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCEC[femLCIndexC])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCEC[femLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC Eigen Centr. Summary for Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCEC[maleLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCEC[maleLCIndexC])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCEC[maleLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC Eigen Centr. Summary for Male",header=FALSE )
+```
+
+### (C) LC: Closeness Centrality Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendLCCC <- sna::closeness(friendLargeComp, gmode = "digraph")
+coworkLCCC <- sna::closeness(coworkLargeComp, gmode = "graph")
+adviceLCCC <- sna::closeness(adviceLargeComp, gmode = "digraph")
+
+hist(friendLCCC[femLCIndexF], main = "Friend LC Net: Closeness Centr. Distr. Female", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 20, cex.main=0.7,
+     xlim = c(0,.65))
+
+hist(friendLCCC[maleLCIndexF ], main = "Friend LC Net: Closeness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 20, cex.main=0.7,
+     xlim = c(0,.65))
+
+hist(coworkLCCC[femLCIndexC], main = "Cowork LC Net: Closeness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 20, cex.main=0.7,
+     xlim = c(0,.65))
+hist(coworkLCCC[maleLCIndexC], main = "Cowork LC Net: Closeness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 20, cex.main=0.7,
+     xlim = c(0,.65))
+
+hist(adviceLCCC[femLCIndexA], main = "Advice LC Net: Closeness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 20, cex.main=0.7,
+     xlim = c(0,.65))
+hist(adviceLCCC[maleLCIndexA], main = "Advice LC Net: Closeness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Closeness", col = "blue", breaks = 20, cex.main=0.7,
+     xlim = c(0,.65))
+```
+
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCCC[femLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCCC[femLCIndexC])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCCC[femLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC Closeness Centr. Summary for Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCCC[maleLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCCC[maleLCIndexC])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCCC[maleLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC Closeness Centr. Summary for Male",header=FALSE )
+```
+
+### (D) LC: Betweeness Centrality Distribution (TODO: check if mean is statistically different)
+
+```{r,message=FALSE, echo=FALSE}
+par(mfrow=c(2,2))
+
+friendLCBC <- sna::betweenness(friendLargeComp, gmode = "digraph")
+coworkLCBC <- sna::betweenness(coworkLargeComp, gmode = "graph")
+adviceLCBC <- sna::betweenness(adviceLargeComp, gmode = "digraph")
+
+hist(friendLCBC[femLCIndexF], main = "Friend LC Net: Betweeness Centr. Distr. Female", 
+     ylab = "Fequency", xlab = "Betweeness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim = c(0,600))
+
+hist(friendLCBC[maleLCIndexF ], main = "Friend LC Net: Betweeness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Betweeness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim = c(0,600))
+
+hist(coworkLCBC[femLCIndexC], main = "Cowork LC Net: Betweeness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Betweeness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim = c(0,600))
+hist(coworkLCBC[maleLCIndexC], main = "Cowork LC Net: Betweeness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Betweeness", col = "blue", breaks = 40, cex.main=0.7,
+     xlim = c(0,600))
+
+hist(adviceLCBC[femLCIndexA], main = "Advice LC Net: Betweeness Centr. Distr. of Female", 
+     ylab = "Fequency", xlab = "Betweeness", col = "blue", breaks = 40, cex.main=0.7)
+hist(adviceLCBC[maleLCIndexA], main = "Advice LC Net: Betweeness Centr. Distr. of Male", 
+     ylab = "Fequency", xlab = "Betweeness", col = "blue", breaks = 40, cex.main=0.7)
+```
+
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCBC[femLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCBC[femLCIndexC])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCBC[femLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC Betweeness Centr. Summary for Female",header=FALSE )
+```
+
+```{r,results = "asis", message=FALSE, echo=FALSE}
+set.seed(12345)
+dat1 <- as.data.frame(unclass(summary(friendLCBC[maleLCIndexF])))
+dat1[,1]<- round(dat1[,1],digits = 2)
+dat1$v2 <- round(unclass(summary(coworkLCBC[maleLCIndexC])),digits = 2)
+dat1$v3 <- round(unclass(summary(adviceLCBC[maleLCIndexA])),digits = 2)
+colnames(dat1) <- c("Friends","Coworkers","Advice")
+df2 <- data.frame(t(dat1))
+stargazer(df2,type = 'latex',summary=FALSE, title = "LC Betweeness Centr. Summary for Male",header=FALSE )
+```
+
+
+### (E) Vertex-Connectivity and Edge-Connectivity (DEBATEABLE ABOUT WHETHER TO CONTINUE)
+
+The vertex connectivity of a graph is the minimum number of vertices needed to be removed to disconnect a large/giant component. Similarly, The edge connectivity of a graph is the minimum number of edges needed to be removed to disconnect a large/giant component.
+
+```{r, message=FALSE}
+set.seed(12345)
+ifriendLargeComp <- asIgraph(friendLargeComp)
+
+# vertex-connectivity and edge-connectivity 
+vertex.connectivity(ifriendLargeComp)
+edge.connectivity(ifriendLargeComp)
+
+#which vertex/edge can we cut to disconnect the component
+fLCcp <- cutpoints(friendLargeComp)
+(friendLargeComp%v%"gender")[fLCcp]
+friendLCInDeg[fLCcp]
+friendLCOutDeg[fLCcp]
+```
+
+```{r,echo=FALSE, fig.align="center"}
+set.seed(1234)
+
+ifriendindex <- as.vector(V(ifriendLargeComp))
+
+bool1 <- ifelse(ifriendindex %in% fLCcp, ifriendindex, NA)
+
+cex1 <- rep(0.7,length(ifriendindex))
+cex1[fLCcp] <- 1
+
+vercol1 <- rep("darkturquoise",length(ifriendindex))
+vercol1[fLCcp] <- "red"
+
+gplot(friendLargeComp,main="Friendship LC Network", vertex.col=vercol1, 
+      usearrows = TRUE, edge.col = "gray58", 
+      vertex.cex = cex1, edge.lwd = 0.5,cex.main=0.5, label=bool1,
+      label.cex = 0.7)
+```
+
+# Census Triad
+
+```{r, message=FALSE}
+library(sna)
+```
+
+```{r}
+tcc<-sna::triad.census(coworker,mode="graph")
+tcf<-sna::triad.census(friendship,mode="digraph")
+tca<-sna::triad.census(advice,mode="digraph")
+
+FE<-as.edgelist(friendNet)
+CE<-as.edgelist(coworkNet)
+AE<-as.edgelist(adviceNet)
+
+tcf
+tcc
+tca
+```
+
+### (A) Friendship
+
+```{r}
+eMatrixF <- cbind(FE[,1],FE[,2])
+maleEdgeF <- eMatrixF[which(apply(eMatrixF, 1, function(x) all(x %in% maleIndex))),]
+femEdgeF  <- eMatrixF[which(apply(eMatrixF, 1, function(x) all(x %in% femIndex))),]
+
+maleNetF <-network(maleEdgeF, directed=TRUE)
+femNetF  <-network(femEdgeF, directed=TRUE)
+
+maleTCobsF <- sna::triad.census(maleNetF)
+femTCobsF  <- sna::triad.census(femNetF)
+
+maleTCobsF
+femTCobsF
+```
+
+
+```{r, eval=FALSE}
+maleTCpermF <- c()
+femTCpermF <- c()
+
+for (i in 1:5000) {
+  gendPerm <- rep(0,71)
+  
+  O1Index <- which(attributes$Office==1)
+  O2Index <- which(attributes$Office==2)
+  O3Index <- which(attributes$Office==3)
+  
+  gendPermO1 <- permute(attributes[O1Index,]$Gender)
+  gendPermO2 <- permute(attributes[O2Index,]$Gender)
+  gendPermO3 <- permute(attributes[O3Index,]$Gender)
+  
+  gendPerm[O1Index] <- gendPermO1
+  gendPerm[O2Index] <- gendPermO2
+  gendPerm[O3Index] <- gendPermO3
+  
+  femIndextemp <- which(gendPerm==2)
+  maleIndextemp <- which(gendPerm==1)
+  
+  maleEdgeFtemp <- eMatrixF[which(apply(eMatrixF, 1, function(x) all(x %in% maleIndextemp))),]
+  femEdgeFtemp  <- eMatrixF[which(apply(eMatrixF, 1, function(x) all(x %in% femIndextemp))),]
+
+  maleNetFtemp <-network(maleEdgeFtemp, directed=TRUE)
+  femNetFtemp  <-network(femEdgeFtemp, directed=TRUE)
+
+  maleTCpermF <- rbind(maleTCpermF, sna::triad.census(maleNetFtemp)) 
+  femTCpermF  <- rbind(femTCpermF , sna::triad.census(femNetFtemp))
+}
+```
+
+
+```{r}
+load("TCFriend.RData")
+```
+
+```{r}
+maleTCpermAveF <- colMeans(maleTCpermF)
+femTCpermAveF <- colMeans(femTCpermF)
+maleTCpermAveF
+femTCpermAveF
+```
+
+```{r, results = "asis", message=FALSE, echo=FALSE}
+library(stargazer)
+maleTCF <- as.data.frame(rbind(maleTCobsF,maleTCpermAveF))
+rownames(maleTCF) <-c("Observed","Perm. Ave")
+femTCF <- as.data.frame(rbind(femTCobsF,femTCpermAveF))
+rownames(femTCF) <-c("Observed","Perm. Ave")
+stargazer(maleTCF[-c(1,2,3)],type = 'latex',summary=FALSE, title = "Friend Net: Triads vs. Male",header=FALSE
+          ,font.size="tiny",column.sep.width="0pt")
+```
+
+```{r, results = "asis", message=FALSE, echo=FALSE}
+stargazer(femTCF[-c(1,2,3)],type = 'latex',summary=FALSE, title = "Friend Net: Triads vs. Female",header=FALSE
+          ,font.size="scriptsize",column.sep.width="0pt")
+```
+
+```{r}
+par(mfrow=c(2,4))
+
+hist(maleTCpermF[,"300"], main = "300", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveF["300"], col="red4",lwd=2)
+abline(v=maleTCobsF[16], col="royalblue4",lwd=2)
+
+hist(maleTCpermF[,"120U"], main = "120U", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveF["120U"], col="red4",lwd=2)
+abline(v=maleTCobsF[13], col="royalblue4",lwd=2)
+
+hist(maleTCpermF[,"120D"], main = "120D", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveF["120D"], col="red4",lwd=2)
+abline(v=maleTCobsF[12], col="royalblue4",lwd=2)
+
+hist(maleTCpermF[,"030T"], main = "030T", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveF["030T"], col="red4",lwd=2)
+abline(v=maleTCobsF[9], col="royalblue4",lwd=2)
+
+hist(maleTCpermF[,"210"], main = "210", ylab = "Fequency", xlab = "Triad Count", col = "lemonchiffon", 
+     cex.main=0.7)
+abline(v=maleTCpermAveF["210"], col="red4",lwd=2)
+abline(v=maleTCobsF[15], col="royalblue4",lwd=2)
+
+hist(maleTCpermF[,"120C"], main = "120C", ylab = "Fequency", xlab = "Triad Count", col = "lemonchiffon", 
+     cex.main=0.7)
+abline(v=maleTCpermAveF["120C"], col="red4",lwd=2)
+abline(v=mean(maleTCobsF[14]), col="royalblue4",lwd=2)
+
+hist(maleTCpermF[,"030C"], main = "030C", ylab = "Fequency", xlab = "Triad Count", col = "lemonchiffon", 
+     cex.main=0.7)
+abline(v=maleTCpermAveF["030C"], col="red4",lwd=2)
+abline(v=mean(maleTCobsF[10]), col="royalblue4",lwd=2)
+
+plot(1,1,main = "",ylab = "",xlab = "", pch=20, col="white", xaxt='n',yaxt='n',axes = FALSE)
+legend('center',fill=c("red4","royalblue4"),legend=c("Perm. Mean", "Observed"))
+```
+
+### (B) Coworker
+
+```{r}
+eMatrixC <- cbind(CE[,1],CE[,2])
+maleEdgeC <- eMatrixC[which(apply(eMatrixC, 1, function(x) all(x %in% maleIndex))),]
+femEdgeC  <- eMatrixC[which(apply(eMatrixC, 1, function(x) all(x %in% femIndex))),]
+
+maleNetC <-network(maleEdgeC, directed=FALSE)
+femNetC  <-network(femEdgeC, directed=FALSE)
+
+maleTCobsC <- sna::triad.census(maleNetC, mode="graph")
+femTCobsC  <- sna::triad.census(femNetC, mode="graph")
+
+maleTCobsC
+femTCobsC
+```
+
+```{r, eval=FALSE}
+maleTCpermC <- c()
+femTCpermC <- c()
+
+for (i in 1:5000) {
+  gendPerm <- rep(0,71)
+  
+  O1Index <- which(attributes$Office==1)
+  O2Index <- which(attributes$Office==2)
+  O3Index <- which(attributes$Office==3)
+  
+  gendPermO1 <- permute(attributes[O1Index,]$Gender)
+  gendPermO2 <- permute(attributes[O2Index,]$Gender)
+  gendPermO3 <- permute(attributes[O3Index,]$Gender)
+  
+  gendPerm[O1Index] <- gendPermO1
+  gendPerm[O2Index] <- gendPermO2
+  gendPerm[O3Index] <- gendPermO3
+  
+  femIndextemp <- which(gendPerm==2)
+  maleIndextemp <- which(gendPerm==1)
+  
+  maleEdgeCtemp <- eMatrixC[which(apply(eMatrixC, 1, function(x) all(x %in% maleIndextemp))),]
+  femEdgeCtemp  <- eMatrixC[which(apply(eMatrixC, 1, function(x) all(x %in% femIndextemp))),]
+
+  maleNetCtemp <-network(maleEdgeCtemp, directed=FALSE)
+  femNetCtemp  <-network(femEdgeCtemp, directed=FALSE)
+
+  maleTCpermC <- rbind(maleTCpermC, sna::triad.census(maleNetCtemp, mode="graph")) 
+  femTCpermC  <- rbind(femTCpermC , sna::triad.census(femNetCtemp, mode="graph"))
+}
+```
+
+
+```{r}
+load("TCCowork.RData")
+```
+
+```{r}
+maleTCpermAveC <- colMeans(maleTCpermC)
+femTCpermAveC <- colMeans(femTCpermC)
+maleTCpermAveC
+femTCpermAveC
+```
+
+```{r, results = "asis", message=FALSE, echo=FALSE}
+library(stargazer)
+maleTCC <- as.data.frame(rbind(maleTCobsC,maleTCpermAveC))
+rownames(maleTCC) <-c("Observed","Perm. Ave")
+femTCC <- as.data.frame(rbind(femTCobsC,femTCpermAveC))
+rownames(femTCC) <-c("Observed","Perm. Ave")
+stargazer(maleTCC,type = 'latex',summary=FALSE, title = "Coworker Net: Triads vs.Male",header=FALSE
+          ,font.size="small")
+```
+
+```{r, results = "asis", message=FALSE, echo=FALSE}
+stargazer(femTCC,type = 'latex',summary=FALSE, title = "Coworker Net: Triads vs. Female",header=FALSE
+          ,font.size="small")
+```
+
+
+```{r}
+hist(maleTCpermC[,"3"], main = "Triangle", ylab = "Fequency", xlab = "Triangle Count", col = "lightcyan1", cex.main=0.7)
+abline(v=maleTCpermAveC["3"], col="red4",lwd=2)
+abline(v=maleTCobsC[4], col="royalblue4",lwd=2)
+legend('topright',fill=c("red4","royalblue4"),legend=c("Perm. Mean", "Observed"))
+```
+
+### (C) Advice
+
+```{r}
+eMatrixA <- cbind(AE[,1],AE[,2])
+maleEdgeA <- eMatrixA[which(apply(eMatrixA, 1, function(x) all(x %in% maleIndex))),]
+femEdgeA  <- eMatrixA[which(apply(eMatrixA, 1, function(x) all(x %in% femIndex))),]
+
+maleNetA <-network(maleEdgeA, directed=TRUE)
+femNetA  <-network(femEdgeA, directed=TRUE)
+
+maleTCobsA <- sna::triad.census(maleNetA)
+femTCobsA  <- sna::triad.census(femNetA)
+
+maleTCobsA
+femTCobsA
+```
+
+
+```{r, eval=FALSE}
+maleTCpermA <- c()
+femTCpermA <- c()
+
+for (i in 1:5000) {
+  gendPerm <- rep(0,71)
+  
+  O1Index <- which(attributes$Office==1)
+  O2Index <- which(attributes$Office==2)
+  O3Index <- which(attributes$Office==3)
+  
+  gendPermO1 <- permute(attributes[O1Index,]$Gender)
+  gendPermO2 <- permute(attributes[O2Index,]$Gender)
+  gendPermO3 <- permute(attributes[O3Index,]$Gender)
+  
+  gendPerm[O1Index] <- gendPermO1
+  gendPerm[O2Index] <- gendPermO2
+  gendPerm[O3Index] <- gendPermO3
+  
+  femIndextemp <- which(gendPerm==2)
+  maleIndextemp <- which(gendPerm==1)
+  
+  maleEdgeAtemp <- eMatrixA[which(apply(eMatrixA, 1, function(x) all(x %in% maleIndextemp))),]
+  femEdgeAtemp  <- eMatrixA[which(apply(eMatrixA, 1, function(x) all(x %in% femIndextemp))),]
+
+  maleNetAtemp <-network(maleEdgeAtemp, directed=TRUE)
+  femNetAtemp  <-network(femEdgeAtemp, directed=TRUE)
+
+  maleTCpermA <- rbind(maleTCpermA, sna::triad.census(maleNetAtemp)) 
+  femTCpermA  <- rbind(femTCpermA , sna::triad.census(femNetAtemp))
+}
+```
+
+
+```{r}
+load("TCAdvice.RData")
+```
+
+```{r}
+maleTCpermAveA <- colMeans(maleTCpermA)
+femTCpermAveA <- colMeans(femTCpermA)
+maleTCpermAveA
+femTCpermAveA
+```
+
+```{r, results = "asis", message=FALSE, echo=FALSE}
+library(stargazer)
+maleTCA <- as.data.frame(rbind(maleTCobsA,maleTCpermAveA))
+rownames(maleTCA) <-c("Observed","Perm. Ave")
+femTCA <- as.data.frame(rbind(femTCobsA,femTCpermAveA))
+rownames(femTCA) <-c("Observed","Perm. Ave")
+stargazer(maleTCA[-c(1,2,3)],type = 'latex',summary=FALSE, title = "Advice Net: Triads vs. Male",header=FALSE
+          ,font.size="tiny",column.sep.width="0pt")
+```
+
+```{r, results = "asis", message=FALSE, echo=FALSE}
+stargazer(femTCA[-c(1,2,3)],type = 'latex',summary=FALSE, title = "Advice Net: Triads vs. Female",header=FALSE
+          ,font.size="scriptsize",column.sep.width="0pt")
+```
+
+```{r}
+par(mfrow=c(2,4))
+
+hist(maleTCpermA[,"300"], main = "300", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveA["300"], col="red4",lwd=2)
+abline(v=maleTCobsA[16], col="royalblue4",lwd=2)
+
+hist(maleTCpermA[,"120U"], main = "120U", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveA["120U"], col="red4",lwd=2)
+abline(v=maleTCobsA[13], col="royalblue4",lwd=2)
+
+hist(maleTCpermA[,"120D"], main = "120D", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveA["120D"], col="red4",lwd=2)
+abline(v=maleTCobsA[12], col="royalblue4",lwd=2)
+
+hist(maleTCpermA[,"030T"], main = "030T", ylab = "Fequency", xlab = "Triad Count", col = "lightcyan1", 
+     cex.main=0.7)
+abline(v=maleTCpermAveA["030T"], col="red4",lwd=2)
+abline(v=maleTCobsA[9], col="royalblue4",lwd=2)
+
+hist(maleTCpermA[,"210"], main = "210", ylab = "Fequency", xlab = "Triad Count", col = "lemonchiffon", 
+     cex.main=0.7)
+abline(v=maleTCpermAveA["210"], col="red4",lwd=2)
+abline(v=maleTCobsA[15], col="royalblue4",lwd=2)
+
+hist(maleTCpermA[,"120C"], main = "120C", ylab = "Fequency", xlab = "Triad Count", col = "lemonchiffon", 
+     cex.main=0.7)
+abline(v=maleTCpermAveA["120C"], col="red4",lwd=2)
+abline(v=mean(maleTCobsA[14]), col="royalblue4",lwd=2)
+
+hist(maleTCpermA[,"030C"], main = "030C", ylab = "Fequency", xlab = "Triad Count", col = "lemonchiffon", 
+     cex.main=0.7)
+abline(v=maleTCpermAveA["030C"], col="red4",lwd=2)
+abline(v=mean(maleTCobsA[10]), col="royalblue4",lwd=2)
+
+plot(1,1,main = "",ylab = "",xlab = "", pch=20, col="white", xaxt='n',yaxt='n',axes = FALSE)
+legend('center',fill=c("red4","royalblue4"),legend=c("Perm. Mean", "Observed"))
+```
+
+# ERGM
+
+```{r}
+StatGen <- attributes$Status*attributes$Gender
+StatGen[StatGen==1] <- "Stat1Male"
+StatGen[attributes$Status==2&attributes$Gender==1] <- "Stat2Male"
+StatGen[attributes$Status==1&attributes$Gender==2] <- "Stat1Fem"
+StatGen[StatGen==4] <- "Stat2Fem"
+friendNet%v%"StatGen" <- StatGen
+coworkNet%v%"StatGen" <- StatGen
+adviceNet%v%"StatGen" <- StatGen
+```
+
+### (A) Friendship Network
+
+###### 1. Erdos-Renyi model, that is, the homogeneous Bernoulli model
+
+```{r, message=FALSE}
+library(ergm)
+friendFit1 <- ergm(friendNet ~ edges) 
+summary(friendFit1)
+```
+
+###### 2. Add Homophily
+
+```{r, message=FALSE}
+friendFit2 <- ergm(friendNet ~ edges + nodematch("gender")) 
+friendFit3 <- ergm(friendNet ~ edges + nodematch("gender") + nodematch("status")) 
+friendFit4 <- ergm(friendNet ~ edges + nodematch("gender") + nodematch("status")
+                   + nodematch("office")) 
+friendFit5 <- ergm(friendNet ~ edges + nodematch("gender") + nodematch("status")
+                   + nodematch("office")+nodematch("practice")) 
+friendFit6 <- ergm(friendNet ~ edges + nodematch("gender") + nodematch("status")
+                   + nodematch("office")+nodematch("practice")+nodematch("school")) 
+friendFit7 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office")+nodematch("practice")+nodematch("school",diff=TRUE)) 
+friendFit8 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE) +nodematch("practice",diff=TRUE)
+                   + nodematch("school",diff=TRUE)) 
+anova(friendFit1,friendFit2, friendFit3, friendFit4, friendFit5, friendFit6,friendFit7, friendFit8)
+```
+
+```{r, message=FALSE}
+friendFit9 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                  + nodematch("office")+nodematch("practice") +nodematch("school",diff=TRUE)
+                  + nodecov("age"))
+friendFit10 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                  + nodematch("office")+nodematch("practice") +nodematch("school",diff=TRUE)
+                  + nodecov("age")+ nodecov("seniority"))
+anova(friendFit7,friendFit9, friendFit10)
+```
+
+I also tried to add StatGen here but to no avail :/
+
+```{r}
+summary(friendFit9)
+```
+
+###### 3. Node Mixing
+
+```{r, message=FALSE}
+friendFit10 <- ergm(friendNet ~ nodemix("StatGen")) 
+summary(friendFit10)
+```
+
+```{r,message=FALSE}
+friendFit11 <- ergm(friendNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE)+nodematch("school",diff=TRUE)
+                    +nodecov("age")) 
+
+anova(friendFit10,friendFit11)
+summary(friendFit11)
+```
+
+```{r}
+anova(friendFit9,friendFit11)
+anova(friendFit11,friendFit9)
+```
+
+###### 4. Try to Improve Model Furthur
+
+
+
+```{r}
+load("friendFit20.RData")
+load("friendFit23.RData")
+load("friendFit24.RData")
+```
+
+```{r}
+friendFit20 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                  + nodematch("office")+nodematch("practice") +nodematch("school",diff=TRUE)
+                  + nodecov("age")+dgwesp(0.3,fixed=TRUE)+mutual+transitiveties)
+friendFit23 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                  + nodematch("office")+nodematch("practice") +nodematch("school",diff=TRUE)
+                  + nodecov("age")+dgwesp(0.4,fixed=TRUE)+mutual+transitiveties)
+friendFit24 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                  + nodematch("office")+nodematch("practice") +nodematch("school",diff=TRUE)
+                  + nodecov("age")+dgwesp(0.36,fixed=TRUE)+mutual+transitiveties)
+```
+
+```{r}
+friendFit25 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                  + nodematch("office")+nodematch("practice") +nodematch("school",diff=TRUE)
+                  + nodecov("age")+dgwesp(0.4,fixed=TRUE)+mutual+transitiveties+ ctriple)
+```
+
+```{r}
+friendFit26 <- ergm(friendNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                  + nodematch("office")+nodematch("practice") +nodematch("school",diff=TRUE)
+                  + nodecov("age")+dgwesp(0.36,fixed=TRUE)+mutual+transitiveties+ ctriple)
+```
+
+
+```{r}
+summary(friendFit20)
+summary(friendFit23)
+summary(friendFit24)
+summary(friendFit25)
+summary(friendFit26)
+```
+
+SO FAR friendFit16 SEEMS BEST!!!! (Before using Tapered)
+
+###### 5. Diagnostics
+
+```{r}
+set.seed(12345)
+mcmc.diagnostics(friendFit16)
+```
+
+
+```{r}
+save(friendFit24,file="friendFit24.RData")
+```
+
+
+```{r}
+plot(gof(friendFit20 ~distance + espartners+idegree+odegree))
+```
+
+```{r}
+plot(gof(friendFit23 ~distance + espartners+idegree+odegree))
+```
+
+***THIS***
+```{r}
+plot(gof(friendFit24 ~distance + espartners+idegree+odegree))
+```
+
+
+```{r}
+set.seed(12345)
+mcmc.diagnostics(friendFit24)
+```
+
+```{r}
+simluation2 <- simulate(friendFit24, verbose = FALSE, seed = 12345)
+set.seed(12345)
+
+vertCol <- ifelse(simluation2%v%"gender" == 1, "maroon4", "darkseagreen2")
+vertShape <- simluation2%v%"office" +2
+vertShape <-ifelse(vertShape==3, 20, vertShape)
+vertShape[vertShape==5] <-3
+vertSize <- ifelse(vertShape==20, 1, 1.3)
+vertSize[vertShape==3] <- 1.5
+
+plot(simluation2,vertex.col=vertCol,edge.col="gray", main="Lazega Friendship Network",vertex.sides=vertShape,vertex.cex=vertSize)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+MODEL 24 For NOW!
+
+
+
+
+### (A) Coworker Network (GOOD!)
+
+###### 1. Erdos-Renyi model, that is, the homogeneous Bernoulli model
+
+```{r, message=FALSE}
+coworkFit1 <- ergm(coworkNet ~ edges) 
+summary(coworkFit1)
+```
+
+###### 2. Add Homophily
+
+```{r, message=FALSE}
+coworkFit2 <- ergm(coworkNet ~ edges + nodematch("gender")) 
+coworkFit3 <- ergm(coworkNet ~ edges + nodematch("gender") + nodematch("status")) 
+coworkFit4 <- ergm(coworkNet ~ edges + nodematch("gender") + nodematch("status")
+                   + nodematch("office")) 
+coworkFit5 <- ergm(coworkNet ~ edges + nodematch("gender") + nodematch("status")
+                   + nodematch("office")+nodematch("practice")) 
+coworkFit6 <- ergm(coworkNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE))
+coworkFit7 <- ergm(coworkNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE)+ nodematch("school",diff=TRUE)
+                   + nodematch("StatGen",diff=TRUE))
+
+anova(coworkFit1,coworkFit2, coworkFit3, coworkFit4, coworkFit5, coworkFit6,coworkFit7)
+```
+
+```{r, message=FALSE}
+coworkFit8 <- ergm(coworkNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE) + nodecov("age"))
+coworkFit9 <- ergm(coworkNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE) + nodecov("age")+ nodecov("seniority"))
+anova(coworkFit6,coworkFit8, coworkFit9)
+```
+
+
+```{r}
+summary(coworkFit8)
+```
+
+```{r}
+
+```
+
+###### 3. Node Mixing
+
+```{r, message=FALSE}
+coworkFit10 <- ergm(coworkNet ~ nodemix("StatGen")) 
+summary(coworkFit10)
+```
+
+```{r,message=FALSE}
+coworkFit11 <- ergm(coworkNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE)
+                    +nodecov("age")) 
+coworkFit12 <- ergm(coworkNet ~ nodemix("StatGen") + nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE) + nodematch("school",diff=TRUE)
+                    +nodecov("age") + nodecov("seniority")+nodematch("gender",diff=TRUE))
+
+anova(coworkFit10,coworkFit11,coworkFit12)
+summary(coworkFit11)
+```
+
+HMMM...MAYBE 11 ACTUALLY
+```{r}
+anova(coworkFit8,coworkFit11)
+anova(coworkFit11,coworkFit8)
+```
+
+###### 4. Try to Improve Model Furthur (TODO)
+
+```{r}
+load("coworkFits.RData")
+```
+
+```{r, eval=FALSE}
+coworkFit15 <- ergm(coworkNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE) + nodecov("age")
+                   + gwesp(0.5,fixed=T))
+
+coworkFit16 <- ergm(coworkNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE)
+                    +nodecov("age")+ gwesp(0.5,fixed=T))
+
+coworkFit17 <- ergm(coworkNet ~ edges + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE) 
+                   + nodecov("age")+gwesp(1,fixed=T)+gwdsp(1,fixed=T))
+
+coworkFit18 <- ergm(coworkNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE) 
+                   + nodecov("age")+gwesp(1,fixed=T)+gwdsp(1,fixed=T))
+
+coworkFit19 <- ergm(coworkNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE) 
+                   + nodecov("age")+gwesp(1,fixed=T))
+```
+
+
+```{r}
+summary(coworkFit15)
+summary(coworkFit17)
+summary(coworkFit18)
+summary(coworkFit19)
+```
+
+
+coworkFit17 SEEMS THE BEST!!
+
+###### 5. Diagnostics
+
+```{r}
+set.seed(12345)
+mcmc.diagnostics(coworkFit17)
+```
+
+```{r}
+plot(gof(coworkFit17 ~degree+distance + espartners ))
+```
+
+```{r}
+simluation <- simulate(coworkFit17, verbose = FALSE, seed = 12345)
+set.seed(12345)
+
+vertCol <- ifelse(simluation%v%"gender" == 1, "maroon4", "darkseagreen2")
+vertShape <- simluation%v%"office" +2
+vertShape <-ifelse(vertShape==3, 20, vertShape)
+vertShape[vertShape==5] <-3
+vertSize <- ifelse(vertShape==20, 1, 1.3)
+vertSize[vertShape==3] <- 1.5
+
+plot(simluation,vertex.col=vertCol,edge.col="gray", main="Lazega Friendship Network",vertex.sides=vertShape,vertex.cex=vertSize)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
+
+
+
+### (C) Advice Network
+
+###### 1. Erdos-Renyi model, that is, the homogeneous Bernoulli model
+
+```{r, message=FALSE}
+adviceFit1 <- ergm(adviceNet ~ edges) 
+summary(adviceFit1)
+```
+
+###### 2. Add Homophily
+
+```{r, message=FALSE}
+adviceFit2 <- ergm(adviceNet ~ edges + nodematch("gender")) 
+adviceFit3 <- ergm(adviceNet ~ edges + nodematch("gender") + nodematch("status")) 
+adviceFit4 <- ergm(adviceNet ~ edges + nodematch("gender") + nodematch("status")
+                   + nodematch("office")) 
+adviceFit5 <- ergm(adviceNet ~ edges + nodematch("gender") + nodematch("status")
+                   + nodematch("office")+nodematch("practice")) 
+adviceFit6 <- ergm(adviceNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE)+ nodematch("school",diff=TRUE))
+adviceFit7 <- ergm(adviceNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE)+ nodematch("school",diff=TRUE)
+                   + nodematch("StatGen",diff=TRUE))
+
+anova(adviceFit1,adviceFit2, adviceFit3, adviceFit4, adviceFit5, adviceFit6, adviceFit7)
+```
+
+```{r, message=FALSE}
+adviceFit8 <- ergm(adviceNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE)+ nodematch("school",diff=TRUE) 
+                   + nodecov("age"))
+adviceFit9 <- ergm(adviceNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE)+ nodematch("school",diff=TRUE) 
+                   + nodecov("age") + nodecov("seniority"))
+anova(adviceFit6,adviceFit8, adviceFit9)
+```
+
+
+```{r}
+summary(adviceFit8)
+```
+
+###### 3. Node Mixing
+
+```{r, message=FALSE}
+adviceFit10 <- ergm(adviceNet ~ nodemix("StatGen")) 
+summary(adviceFit10)
+```
+
+```{r,message=FALSE}
+adviceFit11 <- ergm(adviceNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE) + nodecov("age")) 
+adviceFit12 <- ergm(adviceNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE) + nodecov("age")
+                    + nodematch("school",diff=TRUE))
+adviceFit13 <- ergm(adviceNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE) + nodecov("age")
+                    + nodematch("school",diff=TRUE) + nodecov("seniority"))
+
+anova(adviceFit10,adviceFit11,adviceFit12,adviceFit13)
+summary(adviceFit12)
+```
+
+MODEL 12 SEEMS BETTER!
+
+```{r}
+anova(adviceFit8,adviceFit12)
+anova(adviceFit12,adviceFit8)
+```
+
+###### 4. Try to Improve Model Furthur (TODO)
+
+```{r}
+adviceFit14 <- ergm(adviceNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE) + nodecov("age")
+                    + nodematch("school",diff=TRUE)+mutual+transitiveties)
+
+adviceFit15 <- ergm(adviceNet ~ edges + nodematch("gender",diff=TRUE) + nodematch("status",diff=TRUE)
+                   + nodematch("office",diff=TRUE)+nodematch("practice",diff=TRUE)+ 
+                     nodematch("school",diff=TRUE)+mutual+transitiveties) 
+```
+dgwesp
+
+dgwdsp(.5, fixed = T)
+
+```{r}
+adviceFit16 <- ergm(adviceNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE) + nodecov("age")
+                    + nodematch("school",diff=TRUE)+mutual+transitiveties+ dgwesp(0.72, fixed = T))
+```
+
+```{r}
+adviceFit18 <- ergm(adviceNet ~ nodemix("StatGen")+ nodematch("office",diff=TRUE)
+                    +nodematch("practice",diff=TRUE) + nodecov("age")
+                    + nodematch("school",diff=TRUE)+mutual+ transitiveties +dgwesp(0.72, fixed = T)+ctriple)
+```
+
+
+```{r}
+save(adviceFit18,file="adviceFits18.RData")
+```
+
+```{r}
+load("adviceFits16.RData")
+load("adviceFits18.RData")
+```
+
+```{r}
+summary(adviceFit14)
+summary(adviceFit15)
+```
+
+```{r}
+summary(adviceFit16)
+summary(adviceFit18)
+```
+
+
+###### 5. Diagnostics
+
+```{r}
+set.seed(12345)
+mcmc.diagnostics(adviceFit18)
+```
+
+```{r}
+plot(gof(adviceFit14 ~distance + espartners +idegree+odegree))
+```
+
+```{r}
+plot(gof(adviceFit16 ~distance + espartners +idegree+odegree))
+```
+
+**BEST**
+
+```{r}
+plot(gof(adviceFit18 ~distance + espartners +idegree+odegree))
+```
+
+```{r}
+simluation3 <- simulate(adviceFit18, verbose = FALSE, seed = 12345)
+set.seed(12345)
+
+vertCol <- ifelse(simluation3%v%"gender" == 1, "maroon4", "darkseagreen2")
+vertShape <- simluation3%v%"office" +2
+vertShape <-ifelse(vertShape==3, 20, vertShape)
+vertShape[vertShape==5] <-3
+vertSize <- ifelse(vertShape==20, 1, 1.3)
+vertSize[vertShape==3] <- 1.5
+
+plot(simluation3,vertex.col=vertCol,edge.col="gray", main="Lazega Friendship Network",vertex.sides=vertShape,vertex.cex=vertSize)
+legend('topleft',fill=c("maroon4","darkseagreen2","white","white","white"),pch=c(NA,NA,15,16,17),
+       cex = 0.8,
+       legend=c("Gender: Man", "Gender: Woman", 
+                "Office:Hartford", "Office:Boston", "Office:Providence"))
+```
